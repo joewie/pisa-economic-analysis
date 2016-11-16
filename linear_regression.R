@@ -38,6 +38,16 @@ GDP <- GDP %>%
   select(one_of(c("Country Code", "2012")))
 colnames(GDP) <- c("CNT", "GDP2012")
 
+# Gini index data from World Bank (http://data.worldbank.org/indicator/SI.POV.GINI)
+Gini <- read_csv("API_SI.POV.GINI_DS2_en_csv_v2.csv", skip = 4)
+
+# Since the Gini index data is so sparse, we will use the indices from 2010 to 2014.
+colnames(Gini)[5:61] <- paste0("Y", colnames(Gini)[5:61])
+Gini <- Gini %>%
+  rowwise() %>% mutate(Gini2010_2014 = mean(c(Y2010, Y2011, Y2012, Y2013, Y2014), na.rm = TRUE)) %>%
+  select(one_of(c("Country Code", "Gini2010_2014")))
+colnames(Gini) <- c("CNT", "Gini2010_2014")
+
 students <- students %>%
   # Compute the mean of the plausible values for math.
   mutate(MeanMathPV = (PV1MATH + PV2MATH + PV3MATH + PV4MATH + PV5MATH) / 5) %>%
@@ -57,7 +67,9 @@ students.by_country <- students.by_country %>%
   setDT() %>%
   dcast(CNT ~ term, value.var = c("estimate", "std.error", "statistic", "p.value")) %>%
   # Join GDP data to the data frame.
-  left_join(GDP, by = "CNT")
+  left_join(GDP, by = "CNT") %>%
+  # Join Gini index data to the data frame.
+  left_join(Gini, by = "CNT")
 
 # Is there a relationship between the nature of a country's math-ESCS fit and its per capita GDP?
 ggplot(students.by_country, aes(estimate_ESCS, `estimate_(Intercept)`)) +
@@ -68,6 +80,11 @@ ggplot(students.by_country, aes(GDP2012, estimate_ESCS)) +
 # There might be some positive correlation between a country's math-ESCS gradient and its per capita GDP.
 # This might be worth further investigation.
 
+# "Let's try plotting the math-ESCS gradient of a country against its Gini index.
+ggplot(students.by_country, aes(Gini2010_2014, estimate_ESCS)) +
+  geom_point() + geom_smooth(method = "lm")
+# Negative correlation: econo-socio-cultural status matters less in countries with high inequality.
+# What's a possible explanation?
 
 
 # Nest by school.
