@@ -1,0 +1,2 @@
+/data/INT_STU12_DEC03.txt filter=lfs diff=lfs merge=lfs -text
+/data/INT_SCQ12_DEC03.txt filter=lfs diff=lfs merge=lfs -text

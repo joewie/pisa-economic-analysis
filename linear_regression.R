@@ -1,4 +1,9 @@
 ######################################
+# Remember to set working directory! #
+######################################
+
+
+######################################
 ### Install/Load Required Packages ###
 ######################################
 
@@ -27,11 +32,11 @@ load_data <- function(data_file, sas_file) {
   return(dataframe)
 }
 
-students <- load_data("INT_STU12_DEC03.txt", "PISA2012_SAS_student.sas")
-schools <- load_data("INT_SCQ12_DEC03.txt", "PISA2012_SAS_school.sas")
+students <- load_data("data/INT_STU12_DEC03.txt", "data/PISA2012_SAS_student.sas")
+schools <- load_data("data/INT_SCQ12_DEC03.txt", "data/PISA2012_SAS_school.sas")
 
 # Per capital GDP data from World Bank (http://data.worldbank.org/indicator/NY.GDP.PCAP.CD)
-GDP <- read_csv("API_NY.GDP.PCAP.CD_DS2_en_csv_v2.csv", skip = 4)
+GDP <- read_csv("data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2.csv", skip = 4)
 
 # We only need the 2012 GDP.
 GDP <- GDP %>%
@@ -39,7 +44,7 @@ GDP <- GDP %>%
 colnames(GDP) <- c("CNT", "GDP2012")
 
 # Gini index data from World Bank (http://data.worldbank.org/indicator/SI.POV.GINI)
-Gini <- read_csv("API_SI.POV.GINI_DS2_en_csv_v2.csv", skip = 4)
+Gini <- read_csv("data/API_SI.POV.GINI_DS2_en_csv_v2.csv", skip = 4)
 
 # Since the Gini index data is so sparse, we will use the indices from 2010 to 2014.
 colnames(Gini)[5:61] <- paste0("Y", colnames(Gini)[5:61])
