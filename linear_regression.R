@@ -59,6 +59,13 @@ students <- students %>%
   # Exclude rows that have invalid ESCS (index of economic, social, and cultural status) values.
   filter(ESCS != 9999)
 
+schools <- schools %>%
+  mutate(isPrivate = ifelse(SCHLTYPE == 1 | SCHLTYPE == 2,
+                           TRUE,
+                           ifelse(SCHLTYPE == 3,
+                                  FALSE,
+                                  NA)))
+
 # Nest students by country.
 students.by_country <- students %>%
   group_by(CNT) %>%
@@ -113,4 +120,8 @@ students.by_country <- students.by_country %>%
   select(CNT, data)
 
 # Run more regressions!
-lm.by_country <- student_regression(MeanMathPV ~ ESCS + CLSIZE)
+lm.by_country <- student_regression(MeanMathPV ~ ESCS + isPrivate)
+ggplot(lm.by_country, aes(Gini2010_2014, estimate_isPrivateTRUE)) +
+  geom_point()
+# It seems that above a certain level of inequality (Gini index ~ 41),
+# private schools are consistently better than public ones.
