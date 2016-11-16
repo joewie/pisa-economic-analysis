@@ -54,12 +54,12 @@ students <- students %>%
   # Exclude rows that have invalid ESCS (index of economic, social, and cultural status) values.
   filter(ESCS != 9999)
 
-# Nest by country.
+# Nest students by country.
 students.by_country <- students %>%
   group_by(CNT) %>%
   nest()
 
-students.by_country <- students.by_country %>%
+lm.by_country <- students.by_country %>%
   # Separately regress math score on ESCS for each country.
   mutate(model = map(data, ~ lm(MeanMathPV ~ ESCS, data = .))) %>%
   # Unpack the model into multiple columns.
@@ -72,27 +72,32 @@ students.by_country <- students.by_country %>%
   left_join(Gini, by = "CNT")
 
 # Is there a relationship between the nature of a country's math-ESCS fit and its per capita GDP?
-ggplot(students.by_country, aes(estimate_ESCS, `estimate_(Intercept)`)) +
+ggplot(lm.by_country, aes(estimate_ESCS, `estimate_(Intercept)`)) +
   geom_point(aes(size = GDP2012))
 # Hmmm...
-ggplot(students.by_country, aes(GDP2012, estimate_ESCS)) +
+ggplot(lm.by_country, aes(GDP2012, estimate_ESCS)) +
   geom_point()
 # There might be some positive correlation between a country's math-ESCS gradient and its per capita GDP.
 # This might be worth further investigation.
 
 # "Let's try plotting the math-ESCS gradient of a country against its Gini index.
-ggplot(students.by_country, aes(Gini2010_2014, estimate_ESCS)) +
+ggplot(lm.by_country, aes(Gini2010_2014, estimate_ESCS)) +
   geom_point() + geom_smooth(method = "lm")
 # Negative correlation: econo-socio-cultural status matters less in countries with high inequality.
 # What's a possible explanation?
 
+# Join schools (nested by country) to students (nested by country).
+students.by_country <- schools %>%
+  group_by(CNT) %>%
+  nest() %>%
+  inner_join(students.by_country, by = "CNT")
+colnames(students.by_country) <- c("CNT", "data.schools", "data.students")
 
-# Nest by school.
-students.by_school <- students %>%
-  group_by(SCHOOLID) %>%
-  nest()
-
-schools$students <- schools$SCHOOLID %>%
-  lapply(function(id) {
-    subset(students.by_school, SCHOOLID == id)[,2]
-  })
+# Within each country, match schools to students.
+students.by_country$data <- mapply(function(x, y) left_join(x, y, by = "SCHOOLID"),
+                                   students.by_country$data.students,
+                                   students.by_country$data.schools,
+                                   SIMPLIFY = FALSE)
+# Drop redundant columns.
+students.by_country <- students.by_country %>%
+  select(CNT, data)
