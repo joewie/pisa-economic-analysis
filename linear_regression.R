@@ -59,17 +59,22 @@ students.by_country <- students %>%
   group_by(CNT) %>%
   nest()
 
-lm.by_country <- students.by_country %>%
-  # Separately regress math score on ESCS for each country.
-  mutate(model = map(data, ~ lm(MeanMathPV ~ ESCS, data = .))) %>%
-  # Unpack the model into multiple columns.
-  unnest(model %>% map(tidy)) %>%
-  setDT() %>%
-  dcast(CNT ~ term, value.var = c("estimate", "std.error", "statistic", "p.value")) %>%
-  # Join GDP data to the data frame.
-  left_join(GDP, by = "CNT") %>%
-  # Join Gini index data to the data frame.
-  left_join(Gini, by = "CNT")
+student_regression <- function(formula) {
+  lm.by_country <- students.by_country %>%
+    # Run a separate regression for each country.
+    mutate(model = map(data, ~ lm(formula, data = .))) %>%
+    # Unpack the model into multiple columns.
+    unnest(model %>% map(tidy)) %>%
+    setDT() %>%
+    dcast(CNT ~ term, value.var = c("estimate", "std.error", "statistic", "p.value")) %>%
+    # Join GDP data to the data frame.
+    left_join(GDP, by = "CNT") %>%
+    # Join Gini index data to the data frame.
+    left_join(Gini, by = "CNT")
+  return(lm.by_country)
+}
+
+lm.by_country <- student_regression(MeanMathPV ~ ESCS)
 
 # Is there a relationship between the nature of a country's math-ESCS fit and its per capita GDP?
 ggplot(lm.by_country, aes(estimate_ESCS, `estimate_(Intercept)`)) +
@@ -101,3 +106,6 @@ students.by_country$data <- mapply(function(x, y) left_join(x, y, by = "SCHOOLID
 # Drop redundant columns.
 students.by_country <- students.by_country %>%
   select(CNT, data)
+
+# Run more regressions!
+lm.by_country <- student_regression(MeanMathPV ~ ESCS + CLSIZE)
