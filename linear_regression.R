@@ -36,8 +36,14 @@ load_data <- function(data_file, sas_file) {
   return(dataframe)
 }
 
-students <- load_data("data/INT_STU12_DEC03.txt", "data/PISA2012_SAS_student.sas")
-schools <- load_data("data/INT_SCQ12_DEC03.txt", "data/PISA2012_SAS_school.sas")
+if (file.size("data/INT_STU12_DEC03.txt") < 1e9 | file.size("data/INT_SCQ12_DEC03.txt") < 1e7) {
+  stop("You do not have the correct PISA data files!",
+       "\n       ",
+       "Git LFS (https://git-lfs.github.com/) has to be installed in order to successfully git clone the data files.")
+} else {
+  students <- load_data("data/INT_STU12_DEC03.txt", "data/PISA2012_SAS_student.sas")
+  schools <- load_data("data/INT_SCQ12_DEC03.txt", "data/PISA2012_SAS_school.sas")
+}
 
 # Per capital GDP data from World Bank (http://data.worldbank.org/indicator/NY.GDP.PCAP.CD)
 GDP <- read_csv("data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2.csv", skip = 4)
