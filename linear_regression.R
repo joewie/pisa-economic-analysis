@@ -85,6 +85,15 @@ schools <- schools %>%
                                   FALSE,
                                   NA)))
 
+schools <- schools %>%
+  mutate(classSize = ifelse(SC05Q01 == "01",
+                            7.5,#15 students or fewer
+                        ifelse(SC05Q01 == "09",
+                               75,#50 students or more
+                          ifelse(strtoi(SC05Q01) > 90,
+                                     NA,#NA, Invalid, or missing
+                                 (strtoi(SC05Q01)+1.5)*5#(SC05Q01+(1-2))*5
+                            ))))
 
 
 ########################################################################################################################
@@ -167,5 +176,16 @@ model_2.by_country <- student_regression(MeanMathPV ~ ESCS + isPrivate)
 
 ggplot(model_2.by_country, aes(Gini2010_2014, estimate_isPrivateTRUE)) +
   geom_point()
+# It seems that above a certain level of inequality (Gini index ~ 41),
+# private schools are consistently better than public ones.
+
+########################################################################################################################
+## Model 2: MeanMathPV ~ ESCS + isPrivate
+########################################################################################################################
+
+model_2.by_country <- student_regression(MeanMathPV ~ ESCS + classSize)
+
+ggplot(model_2.by_country, aes(Gini2010_2014, estimate_classSize,label=CNT)) +
+  geom_point() + geom_text(nudge_y=0.3)
 # It seems that above a certain level of inequality (Gini index ~ 41),
 # private schools are consistently better than public ones.
