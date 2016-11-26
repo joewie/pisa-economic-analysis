@@ -86,14 +86,7 @@ schools <- schools %>%
                                   NA)))
 
 schools <- schools %>%
-  mutate(classSize = ifelse(SC05Q01 == "01",
-                            7.5,#15 students or fewer
-                        ifelse(SC05Q01 == "09",
-                               75,#50 students or more
-                          ifelse(strtoi(SC05Q01) > 90,
-                                     NA,#NA, Invalid, or missing
-                                 (strtoi(SC05Q01)+1.5)*5#(SC05Q01+(1-2))*5
-                            ))))
+  filter(CLSIZE != 99)
 
 
 ########################################################################################################################
@@ -121,7 +114,6 @@ students.by_country$data <- mapply(function(x, y) left_join(x, y, by = "SCHOOLID
 # Drop redundant columns.
 students.by_country <- students.by_country %>%
   select(CNT, data)
-
 
 
 ########################################################################################################################
@@ -179,13 +171,34 @@ ggplot(model_2.by_country, aes(Gini2010_2014, estimate_isPrivateTRUE)) +
 # It seems that above a certain level of inequality (Gini index ~ 41),
 # private schools are consistently better than public ones.
 
+
 ########################################################################################################################
-## Model 2: MeanMathPV ~ ESCS + isPrivate
+## Model 3: MeanMathPV ~ ESCS + CLSIZE
 ########################################################################################################################
 
-model_2.by_country <- student_regression(MeanMathPV ~ ESCS + classSize)
+model_3.by_country <- student_regression(MeanMathPV ~ ESCS + CLSIZE)
 
-ggplot(model_2.by_country, aes(Gini2010_2014, estimate_classSize,label=CNT)) +
-  geom_point() + geom_text(nudge_y=0.3)
-# It seems that above a certain level of inequality (Gini index ~ 41),
-# private schools are consistently better than public ones.
+ggplot(model_3.by_country, aes(Gini2010_2014, estimate_CLSIZE, label = CNT)) +
+  geom_point() + geom_text(nudge_y = 0.3)
+
+
+########################################################################################################################
+## Model 4: Country Fixed Effects
+########################################################################################################################
+
+students.unnested <- students.by_country %>% unnest()
+
+model <- lm(data = students.unnested, MeanMathPV ~ ESCS + factor(CNT) - 1)
+
+coeff <- coef(model)[3:65] %>%
+  data.frame() %>%
+  tibble::rownames_to_column("CNT") %>%
+  mutate(CNT = substr(CNT, start = 12, stop = 14)) %>%
+  left_join(GDP, by = "CNT") %>%
+  left_join(Gini, by = "CNT")
+
+qplot(data = coeff, log(GDP2012), .) +
+  ylab("Country Fixed Effect") + geom_smooth(method = "lm")
+
+qplot(data = coeff, Gini2010_2014, .) +
+  ylab("Country Fixed Effect") + geom_smooth(method = "lm")
