@@ -51,6 +51,9 @@ GDP <- read_csv("data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2.csv", skip = 4)
 # Gini index data from World Bank (http://data.worldbank.org/indicator/SI.POV.GINI)
 Gini <- read_csv("data/API_SI.POV.GINI_DS2_en_csv_v2.csv", skip = 4)
 
+# Total population data from World Bank (http://data.worldbank.org/indicator/SP.POP.TOTL)
+TotPop <- read_csv("data/API_SP.POP.TOTL_DS2_en_csv_v2.csv", skip = 4)
+
 
 
 ########################################################################################################################
@@ -61,6 +64,10 @@ Gini <- read_csv("data/API_SI.POV.GINI_DS2_en_csv_v2.csv", skip = 4)
 GDP <- GDP %>%
   select(one_of(c("Country Code", "2012")))
 colnames(GDP) <- c("CNT", "GDP2012")
+# We only need the 2012 Population
+TotPop <- TotPop %>%
+  select(one_of(c("Country Code", "2012")))
+colnames(TotPop) <- c("CNT", "POP2012")
 
 # Since the Gini index data is so sparse, we will use the indices from 2010 to 2014.
 colnames(Gini)[5:61] <- paste0("Y", colnames(Gini)[5:61])
@@ -87,6 +94,11 @@ schools <- schools %>%
 
 schools <- schools %>%
   filter(CLSIZE != 99)
+
+schools <- mutate(schools,disruption = ifelse(strtoi(SC22Q06) > 4,
+               NA,#NA, Invalid, or missing
+               (strtoi(SC22Q06)-1)^2#1=Not at all, 2=Very little, 3= to some extent,4= a lot
+))
 
 
 ########################################################################################################################
@@ -131,7 +143,8 @@ student_regression <- function(formula) {
     # Join GDP data to the data frame.
     left_join(GDP, by = "CNT") %>%
     # Join Gini index data to the data frame.
-    left_join(Gini, by = "CNT")
+    left_join(Gini, by = "CNT") %>%
+    left_join(TotPop, by = "CNT")
   return(model.by_country)
 }
 
@@ -167,7 +180,7 @@ ggplot(model_1.by_country, aes(Gini2010_2014, estimate_ESCS)) +
 model_2.by_country <- student_regression(MeanMathPV ~ ESCS + isPrivate)
 
 ggplot(model_2.by_country, aes(Gini2010_2014, estimate_isPrivateTRUE)) +
-  geom_point()
+  geom_point(aes(size=POP2012))
 # It seems that above a certain level of inequality (Gini index ~ 41),
 # private schools are consistently better than public ones.
 
@@ -178,27 +191,54 @@ ggplot(model_2.by_country, aes(Gini2010_2014, estimate_isPrivateTRUE)) +
 
 model_3.by_country <- student_regression(MeanMathPV ~ ESCS + CLSIZE)
 
-ggplot(model_3.by_country, aes(Gini2010_2014, estimate_CLSIZE, label = CNT)) +
-  geom_point() + geom_text(nudge_y = 0.3)
+ggplot(model_3.by_country, aes(log(GDP2012), estimate_CLSIZE, label = CNT)) +
+  geom_point(aes(size=POP2012)) + geom_text(nudge_y = 0.3)
+
+# plotdata = function(formula,result,nudge){
+#   model_2.by_country <- student_regression(formula)
+#   
+#   ggplot(model_2.by_country, aes(Gini2010_2014,estimate_classSize ,label=CNT)) +
+#     geom_point() + geom_text(nudge_y=nudge)
+# }
+# plotdata(disruption ~ classSize,estimate_classSize,0.003)
+# plotdata(MeanMathPV ~ ESCS + classSize,estimate_classSize,0.003)
+# plotdata(MeanMathPV ~ ESCS + disruption + classSize,estimate_disruption,0.3)
 
 
 ########################################################################################################################
 ## Model 4: Country Fixed Effects
 ########################################################################################################################
 
-students.unnested <- students.by_country %>% unnest()
+students.unnested <- students.by_country %>% 
+  #filter(CNT != "VNM" & CNT != "QAT") %>% 
+  unnest()
 
-model <- lm(data = students.unnested, MeanMathPV ~ ESCS + factor(CNT) - 1)
-
-coeff <- coef(model)[3:65] %>%
+coef_data <- function(model){
+  coef(model)[3:length(coef(model))] %>%
   data.frame() %>%
   tibble::rownames_to_column("CNT") %>%
   mutate(CNT = substr(CNT, start = 12, stop = 14)) %>%
   left_join(GDP, by = "CNT") %>%
   left_join(Gini, by = "CNT")
+}
+# filter(modelstats,sapply(modelstats$term,function(stri){print(stri);grepl("disruption",stri)})) %>%
+#   mutate(CNT = substr(CNT, start = 12, stop = 14))
+#   left_join(GDP, by = "CNT") %>%
+#   left_join(Gini, by = "CNT")
+
+model <- lm(data = students.unnested, MeanMathPV ~ ESCS + factor(CNT) - 1)
+
+coeff = coef_data(model)
 
 qplot(data = coeff, log(GDP2012), .) +
   ylab("Country Fixed Effect") + geom_smooth(method = "lm")
-
 qplot(data = coeff, Gini2010_2014, .) +
   ylab("Country Fixed Effect") + geom_smooth(method = "lm")
+
+graph_coef_data = function(coeff){
+  (ggplot(coeff, aes(log(GDP2012), . ,label=CNT))
+   + geom_text(nudge_y=7) + geom_point() + 
+     ylab("Country Fixed Effect") + geom_smooth(method = "lm"))
+}
+graph_coef_data(coeff)
+
