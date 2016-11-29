@@ -1,0 +1,6 @@
+1. what is the pisa data?
+	a. what is the ESCS index?
+2. What regressions did we run?
+3. What did we find?
+4. What sorts of selection bias could there be? (maybe switch with #3)
+5. Remarks, conclusion
