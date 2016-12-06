@@ -186,8 +186,8 @@ model_1.by_country <- student_regression(MeanMathPV ~ ESCS)
 ggplot(model_1.by_country, aes(estimate_ESCS, `estimate_(Intercept)`)) +
   geom_point(aes(size = GDP2012))
 # Hmmm...
-ggplot(model_1.by_country, aes(GDP2012, estimate_ESCS)) +
-  geom_point()
+ggplot(model_1.by_country, aes(log10(GDP2012), estimate_ESCS)) +
+  geom_point() 
 # There might be some positive correlation between a country's math-ESCS gradient and its per capita GDP.
 # This might be worth further investigation.
 
@@ -215,7 +215,7 @@ ggplot(model_2.by_country, aes(Gini2010_2014, estimate_isPrivateTRUE, label = CN
 ## Model 3: MeanMathPV ~ ESCS + CLSIZE
 ########################################################################################################################
 
-model_3.by_country <- student_regression(MeanMathPV ~ ESCS + CLSIZE)
+model_3.by_country <- student_regression(disruption ~ CLSIZE)
 
 ggplot(model_3.by_country, aes(log10(GDP2012), estimate_CLSIZE, label = CNT)) +
   geom_point() + geom_text(nudge_y = 0.3)
@@ -226,8 +226,8 @@ plotdata = function(formula,result,nudge){
   ggplot(model_2.by_country, aes(log10(GDP2012),estimate_CLSIZE ,label=CNT)) +
     geom_point() + geom_text(nudge_y=nudge) + geom_smooth(method = "lm") + geom_text(aes(x = 3.5, y = max(model_2.by_country$estimate_CLSIZE), label = lm_eqn(lm(estimate_CLSIZE ~ log10(GDP2012), model_2.by_country))), parse = TRUE)
 }
-plotdata(disruption ~ CLSIZE,estimate_CLSIZE,0.003)
-plotdata(MeanMathPV ~ ESCS + CLSIZE,estimate_CLSIZE,0.003)
+plotdata(disruption ~ MeanMathPV+CLSIZE,estimate_CLSIZE,0.003)
+plotdata(MeanMathPV ~ ESCS + CLSIZE,estimate_CLSIZE,0.3)
 plotdata(MeanMathPV ~ ESCS + disruption + CLSIZE,estimate_disruption,0.3)
 
 
